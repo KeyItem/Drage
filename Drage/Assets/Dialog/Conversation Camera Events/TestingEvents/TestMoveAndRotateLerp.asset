@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99bd46d63abf13f4c8043ee70dd59b36, type: 3}
+  m_Name: TestMoveAndRotateLerp
+  m_EditorClassIdentifier: 
+  conversationCameraAction: 4
+  conversationCameraMoveType: 1
+  cameraMoveTime: 3
+  cameraRotateTime: 3

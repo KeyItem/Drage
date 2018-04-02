@@ -1,0 +1,69 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8b338efafec3b144a74c0394d0aa212, type: 3}
+  m_Name: DialogData_1
+  m_EditorClassIdentifier: 
+  dialogLines:
+  - dialogLine: I have reached the Inner Sanctum!
+    speakerName: 1
+  - dialogLine: I've brought you here for one reason... to claim your destiny!
+    speakerName: 2
+  - dialogLine: Now approach the pedestal. [SE]
+    speakerName: 2
+  - dialogLine: Now follow me to the sword altar [SE]
+    speakerName: 2
+  - dialogLine: Now pull with all your might and unleash the god killing sword Norstrandmus!
+      [SE]
+    speakerName: 2
+  - dialogLine: I feel the power! It's coursing through me!
+    speakerName: 1
+  - dialogLine: You are the chosen one! Now go approach the power spot! [SE]
+    speakerName: 2
+  - dialogLine: Now that you've awaken Norstrandmus, approach the sister sword Lio.
+      [SE]
+    speakerName: 2
+  - dialogLine: Now grab your second birth right! [SE]
+    speakerName: 2
+  - dialogLine: Approach the other altar, and unlock Lio's power. [SE]
+    speakerName: 2
+  - dialogLine: I AM UNSTOPPABLE! ROAAAAR!
+    speakerName: 1
+  - dialogLine: You've done it, you've become the Legendary Super Barbarian
+    speakerName: 2
+  dialogHelp:
+  - helperDialog: []
+    speakerNames: 
+  - helperDialog: []
+    speakerNames: 
+  - helperDialog:
+    - '*cough* Uhh... Approach the Pedestal!'
+    - Over here!
+    - Seriously dude, just walk over to where I'm at.
+    speakerNames: 020000000200000002000000
+  - helperDialog: []
+    speakerNames: 
+  - helperDialog: []
+    speakerNames: 
+  - helperDialog: []
+    speakerNames: 
+  - helperDialog: []
+    speakerNames: 
+  - helperDialog: []
+    speakerNames: 
+  - helperDialog: []
+    speakerNames: 
+  - helperDialog: []
+    speakerNames: 
+  - helperDialog: []
+    speakerNames: 
+  - helperDialog: []
+    speakerNames: 
+  conversationCameraEvents: []

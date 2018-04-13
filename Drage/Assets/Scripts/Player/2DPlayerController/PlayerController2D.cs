@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerController2D : Controller2D
@@ -16,6 +17,12 @@ public class PlayerController2D : Controller2D
 
     [Space(10)]
     public Vector2 playerVelocity;
+
+    [Space(10)]
+    public bool canPlayerMove = true;
+    public bool canPlayerSprint = true;
+
+    private bool isPlayerSprinting = false;
 
     [Header("Player Jump Attributes")]
     public PlayerJumpingAttributes2D playerJumpAttributes;
@@ -43,21 +50,31 @@ public class PlayerController2D : Controller2D
     [Header("Player Dashing Attributes")]
     public PlayerDashingAttributes2D playerDashingAttributes;
 
+    private Vector2 playerVelocityBeforeDash;
+
+    private DIRECTION playerDashDirection;
+
     private Vector2 playerDashVelocity;
 
-    private int playerDashDirection;
-
     private float playerDashEndTime;
+
+    private bool hasAirDashed = true;
 
     [Space(10)]
     public bool isDashing = false;
 
+    [Header("Player Attack Attributes")]
+    public PlayerAttackController2D playerAttackController;
+
     [Header("Player Collision Attributes")]
     public PlayerCollisionManager2D playerCollision;
 
+    [Header("Player Animation Attributes")]
+    public PlayerAnimationController2D playerAnimation;
+
     private void Start()
     {
-        PlayerSetup();
+        ObjectSetup();
     }
 
     private void Update()
@@ -65,12 +82,15 @@ public class PlayerController2D : Controller2D
         ManagePlayerVelocity();
     }
 
-    private void PlayerSetup()
+    public override void ObjectSetup()
     {
+        base.ObjectSetup();
+
         playerCollision = GetComponent<PlayerCollisionManager2D>();
+        playerAttackController = GetComponent<PlayerAttackController2D>();
+        playerAnimation = GetComponent<PlayerAnimationController2D>();
 
         CalculateGravity();
-        CalculateJumpVelocity();
     }
 
     public void ReceiveInputData(Vector2 rawInput, Vector2 inputDirection)
@@ -85,6 +105,8 @@ public class PlayerController2D : Controller2D
 
         HandlePlayerWallSliding();
         HandlePlayerDash();
+
+        HandleSpriteFaceDirection(playerCollision.collisionData.faceDirection);
 
         MoveController(playerVelocity * Time.deltaTime, false);
 
@@ -103,11 +125,13 @@ public class PlayerController2D : Controller2D
 
     private void CalculatePlayerVelocity(Vector2 rawInput)
     {
-        playerMovementTargetSpeed = rawInput.x * playerMovementAttributes.playerBaseMovementSpeed;
+        if (canPlayerMove)
+        {
+            playerMovementTargetSpeed = ReturnPlayerTargetSpeed(rawInput);
 
-        playerVelocity.x = Mathf.SmoothDamp(playerVelocity.x, playerMovementTargetSpeed, ref playerMovementSmoothVelocity, ReturnPlayerSmoothMovementTime());
-
-        playerVelocity.y += playerGravity * Time.deltaTime;
+            playerVelocity.x = Mathf.SmoothDamp(playerVelocity.x, playerMovementTargetSpeed, ref playerMovementSmoothVelocity, ReturnPlayerSmoothMovementTime());
+            playerVelocity.y += playerGravity * Time.deltaTime;
+        }
     }
 
     public override void MoveController(Vector2 finalPlayerVelocity, bool isOnPlatform = false)
@@ -116,29 +140,73 @@ public class PlayerController2D : Controller2D
 
         transform.Translate(finalPlayerVelocity);
 
+        playerAnimation.SetFloat("moveSpeed", finalPlayerVelocity.x);
+
         if (isOnPlatform)
         {
             playerCollision.collisionData.isCollidingBelow = true;
         }
     }
 
-    private float ReturnPlayerSmoothMovementTime()
+    public void StartSprint()
+    {
+        if (!isPlayerSprinting)
+        {
+            if (canPlayerSprint)
+            {
+                isPlayerSprinting = true;
+            }
+        }
+    }
+
+    public void StopSprint()
+    {
+        if (isPlayerSprinting)
+        {
+            isPlayerSprinting = false;
+        }
+    }
+
+    private bool CanPlayerMove()
     {
         if (isDashing)
         {
-            return float.MaxValue;
+            return false;
         }
+        else if (playerAttackController.isActivelyAttacking)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private float ReturnPlayerSmoothMovementTime()
+    {
         if (playerCollision.collisionData.isCollidingBelow)
         {
             return playerMovementAttributes.playerMovementSmoothingGround;
         }
-        else if (!playerCollision.collisionData.isCollidingBelow)
+        else
         {
             return playerMovementAttributes.playerMovementSmoothingAir;
         }
-        else
+    }
+
+    private float ReturnPlayerTargetSpeed(Vector2 rawInput)
+    {
+        if (isDashing || playerAttackController.isActivelyAttacking)
         {
             return 0;
+        }
+
+        if (isPlayerSprinting && playerCollision.collisionData.isCollidingBelow)
+        {
+            return playerInputDirection.x * playerMovementAttributes.playerSprintMovementSpeed; //Instead of grabbing the raw input, we grab the direction so that sprinting is always in normalized direction steps.
+        }
+        else
+        {
+            return rawInput.x * playerMovementAttributes.playerBaseMovementSpeed;
         }
     }
 
@@ -189,6 +257,8 @@ public class PlayerController2D : Controller2D
             }
             else
             {
+                CalculateJumpVelocity();
+
                 playerVelocity.y = playerMaxJumpVelocity.y;
             }
         }
@@ -202,15 +272,17 @@ public class PlayerController2D : Controller2D
         }
     }
 
-    private void CalculateGravity()
-    {
-        playerGravity = -(2 * playerJumpAttributes.playerMaxJumpHeight / Mathf.Pow(playerJumpAttributes.playerJumpTime, 2));
-    }
-
     private void CalculateJumpVelocity()
     {
         playerMinJumpVelocity.y = Mathf.Sqrt(2 * Mathf.Abs(playerGravity) * playerJumpAttributes.playerMinJumpHeight);
         playerMaxJumpVelocity.y = Mathf.Abs(playerGravity) * playerJumpAttributes.playerJumpTime;
+
+        CalculateGravity();
+    }
+
+    private void CalculateGravity()
+    {
+        playerGravity = -(2 * playerJumpAttributes.playerMaxJumpHeight / Mathf.Pow(playerJumpAttributes.playerJumpTime, 2));
     }
 
     private void HandlePlayerWallSliding()
@@ -261,24 +333,42 @@ public class PlayerController2D : Controller2D
     {
         if (!isDashing)
         {
-            if (playerCollision.collisionData.isCollidingBelow)
+            if (playerInputDirection.x != 0)
             {
-                if (playerInputDirection.x != 0)
+                float dashDistance = 0;
+                float dashTime = 0;
+
+                playerDashDirection = (playerInputDirection.x == -1) ? DIRECTION.LEFT : DIRECTION.RIGHT;
+
+                if (playerCollision.collisionData.isCollidingBelow)
                 {
-                    playerDashDirection = (int)playerInputDirection.x;
-       
-                    float dashDistance = (playerDashDirection == -1) ? playerDashingAttributes.playerBackwardDashDistance : playerDashingAttributes.playerForwardDashDistance;
-                    float dashTime = (playerDashDirection == -1) ? playerDashingAttributes.playerBackwardDashTime : playerDashingAttributes.playerForwardDashTime;
+                    dashDistance = (playerDashDirection == DIRECTION.LEFT) ? -playerDashingAttributes.playerGroundDashDistance : playerDashingAttributes.playerGroundDashDistance;
+                    dashTime = playerDashingAttributes.playerGroundDashTime;
 
-                    playerDashVelocity = CalculateDashAcceleration(dashDistance, dashTime);
-
-                    playerDashEndTime = Time.time + dashTime;
-
-                    playerVelocity.x = 0;
-                    playerMovementSmoothVelocity = 0;
-
-                    isDashing = true;
+                    hasAirDashed = false;
                 }
+                else if (!hasAirDashed)
+                {
+                    dashDistance = (playerDashDirection == DIRECTION.LEFT) ? -playerDashingAttributes.playerAirDashDistance : playerDashingAttributes.playerAirDashDistance;
+                    dashTime = playerDashingAttributes.playerGroundDashTime;
+
+                    hasAirDashed = true;
+                }
+                else
+                {
+                    return;
+                }
+
+                playerDashVelocity = CalculateDashAcceleration(dashDistance, dashTime);
+
+                playerDashEndTime = Time.time + dashTime;
+
+                playerVelocityBeforeDash = playerVelocity;
+
+                playerVelocity.x = 0;
+                playerMovementSmoothVelocity = 0;
+
+                isDashing = true;
             }
         }
     }
@@ -289,40 +379,62 @@ public class PlayerController2D : Controller2D
         {
             if (Time.time < playerDashEndTime)
             {
-                if (playerCollision.collisionData.isCollidingLeft || playerCollision.collisionData.isCollidingRight)
+                if (playerDashDirection == DIRECTION.LEFT ? playerCollision.collisionData.isCollidingLeft : playerCollision.collisionData.isCollidingRight)
                 {
-                    for (int i = 0; i < playerCollision.collisionData.collidedObjects.Count; i++)
+                    foreach (KeyValuePair<int, CollisionInfo2D> collisionDataPair in playerCollision.collisionData.collidedObjects)
                     {
-                        GameObject hitObject = playerCollision.collisionData.collidedObjects[i];
-
-                        if (Helper.LayerMaskContainsLayer(playerDashingAttributes.dashCollisionLayer, hitObject.layer))
+                        if (collisionDataPair.Value.collisionDirection == playerDashDirection)
                         {
-                            Debug.Log("Hit Something While Dashing!");
+                            if (Helper.LayerMaskContainsLayer(playerDashingAttributes.dashCollisionLayer, collisionDataPair.Value.collidedObject.layer))
+                            {
+                                EndDash();
+                            }
                         }
                     }
                 }
 
                 playerVelocity.x += playerDashVelocity.x * Time.deltaTime;
+                playerVelocity.y = 0;
             }
             else
             {
                 EndDash();
             }
         }
+        else
+        {
+            if (hasAirDashed)
+            {
+                if (playerCollision.collisionData.isCollidingBelow || playerCollision.playerWallCollisionData.isAdjacentToClimbableWall)
+                {
+                    hasAirDashed = false;
+                }
+            }
+        }   
     }
 
     private void EndDash()
     {
+        playerVelocity = playerVelocityBeforeDash;
+
         playerDashDirection = 0;
 
         playerDashVelocity = Vector2.zero;
+        playerVelocityBeforeDash = Vector2.zero;
 
         playerDashEndTime = 0;
 
         playerVelocity.x = 0;
+        playerVelocity.y = 0;
+
         playerMovementSmoothVelocity = 0;
 
         isDashing = false;
+    }
+
+    public void PlayerAttack()
+    {
+        playerAttackController.RequestAttack(playerCollision.collisionData.faceDirection);
     }
 }
 
@@ -331,6 +443,7 @@ public struct PlayerMovementAttributes2D
 {
     [Header("Player Movement Values")]
     public float playerBaseMovementSpeed;
+    public float playerSprintMovementSpeed;
 
     [Space(10)]
     public float playerMovementSmoothingGround;
@@ -371,12 +484,12 @@ public struct PlayerWallClimbingAttributes2D
 public struct PlayerDashingAttributes2D
 {
     [Header("Player Dashing Attributes")]
-    public float playerForwardDashDistance;
-    public float playerForwardDashTime;
+    public float playerGroundDashDistance;
+    public float playerGroundDashTime;
 
     [Space(10)]
-    public float playerBackwardDashDistance;
-    public float playerBackwardDashTime;
+    public float playerAirDashDistance;
+    public float playerAirDashTime;
 
     [Space(20)]
     public LayerMask dashCollisionLayer;

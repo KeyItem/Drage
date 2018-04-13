@@ -15,6 +15,10 @@ public class InputManager2D : MonoBehaviour
     private Vector2 inputVector;
 
     [Space(10)]
+    public float xAxisRawInput;
+    public float yAxisRawInput;
+
+    [Space(10)]
     private Vector2 inputDirectionVector;
 
     private bool canReceiveInput = true;
@@ -51,7 +55,10 @@ public class InputManager2D : MonoBehaviour
 
                 inputVector.Set(xAxisInput, yAxisInput);
 
-                inputDirectionVector = ReturnInputDirectionVector(xAxisInput, yAxisInput);
+                xAxisRawInput = playerInput.GetAxisRaw("HorizontalAxis");
+                yAxisRawInput = playerInput.GetAxisRaw("VerticalAxis");
+
+                inputDirectionVector = ReturnInputDirectionVector(xAxisRawInput, yAxisRawInput);
 
                 if (playerInput.GetButtonDown("Jump"))
                 {
@@ -65,6 +72,21 @@ public class InputManager2D : MonoBehaviour
                 if (playerInput.GetButtonDown("Dash"))
                 {
                     playerController.PlayerDash();
+                }
+
+                if (playerInput.GetButtonDown("Sprint"))
+                {
+                    playerController.StartSprint();
+                }
+
+                if (playerInput.GetButtonUp("Sprint"))
+                {
+                    playerController.StopSprint();
+                }
+
+                if (playerInput.GetButtonDown("Attack"))
+                {
+                    playerController.PlayerAttack();
                 }
 
                 playerController.ReceiveInputData(inputVector, inputDirectionVector);

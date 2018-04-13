@@ -22,13 +22,17 @@ public class ObjectController2D : Controller2D
         ManageObjectVelocity();
     }
 
-    private void ObjectSetup()
+    public override void ObjectSetup()
     {
+        base.ObjectSetup();
+
         objectCollisions = GetComponent<CollisionManager2D>();
     }
 
     private void ManageObjectVelocity()
     {
+        HandleSpriteFaceDirection(objectCollisions.collisionData.faceDirection);
+
         objectVelocity.y += objectGravity * Time.deltaTime;
 
         MoveController(objectVelocity * Time.deltaTime, false);
@@ -48,6 +52,8 @@ public class ObjectController2D : Controller2D
 
     public override void MoveController(Vector2 finalControllerVelocity, bool isOnPlatform = false)
     {
+        HandleSpriteFaceDirection(objectCollisions.collisionData.faceDirection);
+
         objectCollisions.ManageObjectCollisions(ref finalControllerVelocity);
 
         transform.Translate(finalControllerVelocity);

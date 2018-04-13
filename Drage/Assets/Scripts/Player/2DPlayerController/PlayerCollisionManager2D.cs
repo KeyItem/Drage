@@ -39,6 +39,16 @@ public class PlayerCollisionManager2D : CollisionManager2D
                     continue;
                 }
 
+                DIRECTION collisionDirection = (directionX == -1) ? DIRECTION.LEFT : DIRECTION.RIGHT;
+                GameObject collisionObject = rayHit.collider.gameObject;
+
+                CollisionInfo2D newCollisionInfo = new CollisionInfo2D(collisionDirection, collisionObject);
+
+                if (!collisionData.collidedObjects.ContainsValue(newCollisionInfo))
+                {
+                    collisionData.collidedObjects.Add((collisionData.collidedObjects.Count + 1), newCollisionInfo);
+                }
+
                 float currentSlopeAngle = Vector2.Angle(rayHit.normal, Vector2.up);
 
                 if (i == 0 && currentSlopeAngle <= collisionAttributes.objectMaxSlope)

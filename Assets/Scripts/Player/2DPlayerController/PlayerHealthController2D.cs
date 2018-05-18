@@ -36,7 +36,12 @@ public class PlayerHealthController2D : HealthController2D
             OnPlayerTakeDamage();
         }
 
-        LoseALife();
+        targetCurrentHealth -= damageValue;
+
+        if (targetCurrentHealth <= 0)
+        {
+            LoseALife();
+        }     
     }
 
     public void LoseALife()

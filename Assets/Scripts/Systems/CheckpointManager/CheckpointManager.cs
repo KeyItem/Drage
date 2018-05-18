@@ -67,7 +67,7 @@ public class CheckpointManager : MonoBehaviour
 
     private void ManageCheckpoints()
     {
-        if (currentCheckpoint != null && nextCheckpoint != null)
+        if (currentCheckpoint != Vector2.zero && nextCheckpoint != Vector2.zero)
         {
             if (!isAtLastCheckpoint)
             {

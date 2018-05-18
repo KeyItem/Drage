@@ -1,0 +1,64 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cb2c259824671e0479bffe2e162f3f85, type: 3}
+  m_Name: Fist_WeaponData
+  m_EditorClassIdentifier: 
+  weaponName: Fist
+  weaponAttacks:
+  - attackName: NeutralAttack
+    attackAttributes:
+    - subAttackName: 
+      subAttackID: 0
+      attackMovement:
+        attackMovementVelocity: {x: 2, y: 0}
+        attackMovementLifetime: 0.2
+        attackStartWaitTime: 0
+      attackColliderAttributes:
+        colliderSize: {x: 0, y: 0}
+        colliderOffset: {x: 0, y: 0}
+      attackLifetime: 0.2
+      attackCooldown: 0
+      attackDamageAttributes:
+        attackDamage: 1
+        knockbackTime: 0.1
+        knockbackDirection: {x: 2, y: 0}
+    - subAttackName: 
+      subAttackID: 1
+      attackMovement:
+        attackMovementVelocity: {x: 1, y: 0}
+        attackMovementLifetime: 0.2
+        attackStartWaitTime: 0.2
+      attackColliderAttributes:
+        colliderSize: {x: 0, y: 0}
+        colliderOffset: {x: 0, y: 0}
+      attackLifetime: 0.2
+      attackCooldown: 0
+      attackDamageAttributes:
+        attackDamage: 0
+        knockbackTime: 0.1
+        knockbackDirection: {x: 2, y: 0}
+    - subAttackName: 
+      subAttackID: 2
+      attackMovement:
+        attackMovementVelocity: {x: 3, y: 0}
+        attackMovementLifetime: 0.2
+        attackStartWaitTime: 0
+      attackColliderAttributes:
+        colliderSize: {x: 0, y: 0}
+        colliderOffset: {x: 0, y: 0}
+      attackLifetime: 0.2
+      attackCooldown: 0
+      attackDamageAttributes:
+        attackDamage: 3
+        knockbackTime: 0.2
+        knockbackDirection: {x: 2, y: 2}
+  weaponAnimatorController: {fileID: 22100000, guid: f2639bada86650a4fa896c4ac541ec4c,
+    type: 2}

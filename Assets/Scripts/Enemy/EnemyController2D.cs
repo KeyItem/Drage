@@ -15,6 +15,17 @@ public class EnemyController2D : Controller2D
     [Space(10)]
     public bool canEnemyMove = true;
 
+    [Space(10)]
+    public bool isEnemyActive = true;
+
+    [Header("Player Static Velocity Attributes")]
+    private Vector2 staticVelocity;
+
+    private float staticVelocityTime;
+    private float staticVelocityEndTime;
+
+    private bool isEnemyBeingMovedByStaticVelocity = false;
+
     [Header("Enemy Pathing Attributes")]
     public Vector2[] enemyLocalWaypoints;
 
@@ -22,12 +33,20 @@ public class EnemyController2D : Controller2D
 
     private Vector2 targetWaypoint;
 
+    private Vector2 enemyStartingPosition;
+
     private int currentWaypointIndex = 0;
 
     private bool enemyHasWaypoints = false;
 
     [Space(10)]
+    public bool isChasingPlayer = false;
+    public bool isMovingToWaypoint = false;
+    public bool isReturningToStartingPosition = false;
+
+    [Space(10)]
     public float minDistanceToWaypoint = 0.2f;
+    public float minDistanceToStartingPoint = 0.1f;
 
     [Header("Player Detection Attributes")]
     public EnemyChaseAttributes2D enemyChaseAttributes;
@@ -38,14 +57,14 @@ public class EnemyController2D : Controller2D
     [Space(10)]
     public float enemyDistanceToTarget = 0;
 
-    [Space(10)]
-    public bool isChasingPlayer = false;
-
     [Header("Enemy Collision Attributes")]
     public EnemyCollisionManager2D enemyCollisions;
 
     [Space(10)]
     public float enemyGravity;
+
+    [Header("Enemy Health Attributes")]
+    public EnemyHealthController2D enemyHealth;
 
     [Header("Enemy Attack Attributes")]
     public EnemyAttackController2D enemyAttackController;
@@ -57,11 +76,14 @@ public class EnemyController2D : Controller2D
     {
         ObjectSetup();
         WaypointSetup();
+        PositioningSetup();
     }
 
     private void Update()
     {
-        ManageObjectVelocity();
+        CheckIfEnemyIsStillActive();
+
+        ManageEnemyVelocity();
     }
 
     public override void ObjectSetup()
@@ -69,32 +91,66 @@ public class EnemyController2D : Controller2D
         base.ObjectSetup();
 
         enemyCollisions = GetComponent<EnemyCollisionManager2D>();
+        enemyHealth = GetComponent<EnemyHealthController2D>();
         enemyAttackController = GetComponent<EnemyAttackController2D>();
     }
 
-    private void ManageObjectVelocity()
+    private void PositioningSetup()
     {
-        CheckForTarget();
+        enemyStartingPosition = ReturnStartingPosition(transform.position);
+    }
 
-        CalculateEnemyVelocity();
-
-        HandleSpriteFaceDirection(enemyCollisions.collisionData.faceDirection);
-
-        if (canEnemyMove)
+    private void WaypointSetup()
+    {
+        if (enemyLocalWaypoints.Length > 0)
         {
-            MoveController(enemyVelocity * Time.deltaTime, false);
+            enemyHasWaypoints = true;
+
+            isMovingToWaypoint = true;
+
+            ConvertLocalToGlobalWaypoints();
+
+            currentWaypointIndex = 0;
+
+            SetTargetWaypoint(enemyGlobalWaypoints[0]);
         }
+    }
 
-        if (enemyCollisions.collisionData.isCollidingAbove || enemyCollisions.collisionData.isCollidingBelow)
+    private void ManageEnemyVelocity()
+    {
+        if (isEnemyActive)
         {
-            if (enemyCollisions.collisionData.isSlidingDownSlope)
+            if (isEnemyBeingMovedByStaticVelocity)
             {
-                enemyVelocity.y += enemyCollisions.collisionData.slopeNormal.y * -enemyGravity * Time.deltaTime;
+                HandleControllerStaticVelocity();
+
+                MoveControllerStaticVelocity(enemyVelocity * Time.deltaTime, false);
             }
             else
             {
-                enemyVelocity.y = 0;
+                CheckForTarget();
+
+                CalculateEnemyVelocity();
+
+                MoveController(enemyVelocity * Time.deltaTime, false);
+
+                if (enemyCollisions.collisionData.isCollidingAbove || enemyCollisions.collisionData.isCollidingBelow)
+                {
+                    if (!isEnemyBeingMovedByStaticVelocity)
+                    {
+                        if (enemyCollisions.collisionData.isSlidingDownSlope)
+                        {
+                            enemyVelocity.y += enemyCollisions.collisionData.slopeNormal.y * -enemyGravity * Time.deltaTime;
+                        }
+                        else
+                        {
+                            enemyVelocity.y = 0;
+                        }
+                    }
+                }
             }
+
+            HandleSpriteFaceDirection(enemyCollisions.collisionData.faceDirection);
         }
     }
 
@@ -113,7 +169,10 @@ public class EnemyController2D : Controller2D
 
         enemyVelocity.x = Mathf.SmoothDamp(enemyVelocity.x, enemyTargetSpeed, ref enemySmoothVelocity, ReturnSmoothedMovementVelocity());
 
-        enemyVelocity.y += enemyGravity * Time.deltaTime;
+        if (!isEnemyBeingMovedByStaticVelocity)
+        {
+            enemyVelocity.y += enemyGravity * Time.deltaTime;
+        }
     }
 
     public override void MoveController(Vector2 finalControllerVelocity, bool isOnPlatform = false)
@@ -126,6 +185,87 @@ public class EnemyController2D : Controller2D
         {
             enemyCollisions.collisionData.isCollidingBelow = true;
         }
+    }
+
+    public override void MoveControllerStaticVelocity(Vector2 finalControllerVelocity, bool isOnPlatform)
+    {
+        enemyCollisions.ManageObjectCollisions(ref finalControllerVelocity, Vector2.zero);
+
+        transform.Translate(finalControllerVelocity);
+
+        if (isOnPlatform)
+        {
+            enemyCollisions.collisionData.isCollidingBelow = true;
+        }
+    }
+
+    public override void SetNewStaticVelocity(Vector2 velocity, float timeValue)
+    {
+        if (isEnemyActive)
+        {
+            Debug.Log("Setting New Static Velocity :: " + velocity + " for :: " + timeValue);
+
+            staticVelocity = CalculateRequiredVelocity(velocity, velocity.magnitude, timeValue);
+
+            staticVelocityTime = 0;
+            staticVelocityEndTime = timeValue;
+
+            enemyVelocity = Vector2.zero;
+            enemySmoothVelocity = 0;
+
+            isEnemyBeingMovedByStaticVelocity = true;
+        }
+    }
+
+    private void HandleControllerStaticVelocity()
+    {
+        if (isEnemyBeingMovedByStaticVelocity)
+        {
+            if (staticVelocityTime < staticVelocityEndTime)
+            {
+                enemyVelocity += staticVelocity * Time.deltaTime;
+
+                if (!enemyCollisions.collisionData.isCollidingBelow)
+                {
+                    enemyVelocity.y += enemyGravity * Time.deltaTime;
+                }
+
+                staticVelocityTime += Time.deltaTime;
+            }
+            else
+            {
+                EndAcceleration();
+            }
+        }
+    }
+
+    private void EndAcceleration()
+    {
+        staticVelocity = Vector2.zero;
+
+        staticVelocityTime = 0;
+        staticVelocityEndTime = 0;
+
+        enemySmoothVelocity = 0;
+
+        enemyVelocity = Vector2.zero;
+
+        isEnemyBeingMovedByStaticVelocity = false;
+    }
+
+    private void CheckIfEnemyIsStillActive()
+    {
+        if (!enemyHealth.IsTargetAlive() && isEnemyActive)
+        {
+            DisableController();
+        }
+    }
+
+    public override void DisableController()
+    {
+        isEnemyActive = false;
+
+        enemyCollisions.DisableCollisions();
     }
 
     private float ReturnEnemySpeed()
@@ -174,6 +314,8 @@ public class EnemyController2D : Controller2D
     {
         isChasingPlayer = true;
 
+        isReturningToStartingPosition = false;
+
         currentTarget = newTarget;
 
         enemyCollisions.canSearchForTarget = false;
@@ -191,6 +333,10 @@ public class EnemyController2D : Controller2D
         if (enemyHasWaypoints)
         {
             targetWaypoint = ReturnClosestWaypoint(enemyGlobalWaypoints);
+        }
+        else
+        {
+            isReturningToStartingPosition = true;
         }
     }
 
@@ -211,20 +357,6 @@ public class EnemyController2D : Controller2D
         Debug.DrawRay(transform.position, interceptVector.normalized * rayDistance, Color.green);
 
         return true;
-    }
-
-    private void WaypointSetup()
-    {
-        if (enemyLocalWaypoints.Length > 0)
-        {
-            enemyHasWaypoints = true;
-
-            ConvertLocalToGlobalWaypoints();
-
-            currentWaypointIndex = 0;
-
-            SetTargetWaypoint(enemyGlobalWaypoints[0]);
-        }    
     }
 
     private void CheckDistanceToTarget()
@@ -265,6 +397,19 @@ public class EnemyController2D : Controller2D
                 SetTargetWaypoint(nextWaypoint);
             }
         }
+        else if (isReturningToStartingPosition)
+        {
+            distanceToTarget = Vector2.Distance(transform.position, enemyStartingPosition);
+
+            enemyDistanceToTarget = distanceToTarget;
+
+            if (distanceToTarget < minDistanceToStartingPoint)
+            {
+                targetWaypoint = Vector2.zero;
+
+                isReturningToStartingPosition = false;
+            }
+        }
     }
 
     private Vector2 ReturnTargetDirection()
@@ -273,11 +418,15 @@ public class EnemyController2D : Controller2D
 
         if (isChasingPlayer)
         {
-            directionVector = (Vector2)currentTarget.position - (Vector2)transform.position;
+            directionVector = ((Vector2)currentTarget.position - (Vector2)transform.position).normalized;
         }
         else if (enemyHasWaypoints)
         {
             directionVector = targetWaypoint - (Vector2)transform.position;
+        }
+        else if (isReturningToStartingPosition)
+        {
+            directionVector = enemyStartingPosition - (Vector2)transform.position;
         }
 
         directionVector.y = 0;
@@ -313,6 +462,22 @@ public class EnemyController2D : Controller2D
         }
 
         return closestWaypoint;
+    }
+
+    private Vector2 ReturnStartingPosition(Vector2 spawnPosition)
+    {
+        RaycastHit2D startingPositionHit = Physics2D.Raycast(spawnPosition, Vector2.down, Mathf.Infinity, enemyCollisions.collisionAttributes.collisionMask);
+
+        if (startingPositionHit)
+        {
+            Vector2 newStartingPosition = startingPositionHit.point + Vector2.up;
+
+            return newStartingPosition;
+        }
+        else
+        {
+            return spawnPosition;
+        }
     }
 
     private Vector2 ReturnNextWaypoint()
@@ -354,6 +519,16 @@ public class EnemyController2D : Controller2D
 
     private void OnDrawGizmosSelected()
     {
+        if (enemyStartingPosition != null)
+        {
+            Gizmos.color = Color.yellow;
+
+            float gizmosSize = 0.3f;
+
+            Gizmos.DrawLine(enemyStartingPosition - Vector2.up * gizmosSize, enemyStartingPosition + Vector2.up * gizmosSize);
+            Gizmos.DrawLine(enemyStartingPosition - Vector2.left * gizmosSize, enemyStartingPosition + Vector2.left * gizmosSize);
+        }
+
         if (enemyLocalWaypoints != null)
         {
             if (enemyLocalWaypoints.Length > 0)

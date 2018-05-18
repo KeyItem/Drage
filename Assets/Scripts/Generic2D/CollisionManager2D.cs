@@ -30,6 +30,8 @@ public class CollisionManager2D : MonoBehaviour
 
     private const float distanceBetweenCollisionRays = 0.25f;
 
+    private bool canCheckForCollisions = true;
+
     public virtual void Start()
     {
         CollisionSetup();
@@ -84,146 +86,152 @@ public class CollisionManager2D : MonoBehaviour
 
     public virtual void DetectHorizontalCollisions(ref Vector2 objectVelocity, Vector2 inputDirection)
     {
-        float directionX = collisionData.faceDirection;
-        float rayLength = Mathf.Abs(objectVelocity.x) + collisionAttributes.objectSkinWidth;
-
-        if (Mathf.Abs(objectVelocity.x) < collisionAttributes.objectSkinWidth)
+        if (canCheckForCollisions)
         {
-            rayLength = 2 * collisionAttributes.objectSkinWidth;
-        }
+            float directionX = collisionData.faceDirection;
+            float rayLength = Mathf.Abs(objectVelocity.x) + collisionAttributes.objectSkinWidth;
 
-        for (int i = 0; i < collisionHorizontalRayCount; i++)
-        {
-            Vector2 rayOrigin = (directionX == -1) ? rayOrigin = objectBounds.bottomLeft : objectBounds.bottomRight;
-            rayOrigin += Vector2.up * (collisionHorizontalRaySpacing * i);
-
-            RaycastHit2D rayHit = Physics2D.Raycast(rayOrigin, Vector2.right * directionX, rayLength, collisionAttributes.collisionMask);
-
-            Debug.DrawRay(rayOrigin, Vector2.right * directionX, Color.red);
-
-            if (rayHit)
+            if (Mathf.Abs(objectVelocity.x) < collisionAttributes.objectSkinWidth)
             {
-                if (rayHit.distance == 0)
+                rayLength = 2 * collisionAttributes.objectSkinWidth;
+            }
+
+            for (int i = 0; i < collisionHorizontalRayCount; i++)
+            {
+                Vector2 rayOrigin = (directionX == -1) ? rayOrigin = objectBounds.bottomLeft : objectBounds.bottomRight;
+                rayOrigin += Vector2.up * (collisionHorizontalRaySpacing * i);
+
+                RaycastHit2D rayHit = Physics2D.Raycast(rayOrigin, Vector2.right * directionX, rayLength, collisionAttributes.collisionMask);
+
+                Debug.DrawRay(rayOrigin, Vector2.right * directionX, Color.red);
+
+                if (rayHit)
                 {
-                    continue;
-                }
-
-                DIRECTION collisionDirection = (directionX == -1) ? DIRECTION.LEFT : DIRECTION.RIGHT;
-                GameObject collisionObject = rayHit.collider.gameObject;
-
-                CollisionInfo2D newCollisionInfo = new CollisionInfo2D(collisionDirection, collisionObject);
-
-                if (!collisionData.collidedObjects.ContainsValue(newCollisionInfo))
-                {
-                    collisionData.collidedObjects.Add((collisionData.collidedObjects.Count + 1), newCollisionInfo);
-                }
-
-                float currentSlopeAngle = Vector2.Angle(rayHit.normal, Vector2.up);
-
-                if (i == 0 && currentSlopeAngle <= collisionAttributes.objectMaxSlope)
-                {
-                    if (collisionData.isDescendingSlope)
+                    if (rayHit.distance == 0)
                     {
-                        collisionData.isDescendingSlope = false;
-
-                        objectVelocity = collisionData.previousVelocity;
+                        continue;
                     }
 
-                    float distanceToSlopeStart = 0;
+                    DIRECTION collisionDirection = (directionX == -1) ? DIRECTION.LEFT : DIRECTION.RIGHT;
+                    GameObject collisionObject = rayHit.collider.gameObject;
 
-                    if (currentSlopeAngle != collisionData.previousSlopeAngle)
+                    CollisionInfo2D newCollisionInfo = new CollisionInfo2D(collisionDirection, collisionObject);
+
+                    if (!collisionData.collidedObjects.ContainsValue(newCollisionInfo))
                     {
-                        distanceToSlopeStart = rayHit.distance - collisionAttributes.objectSkinWidth;
-
-                        objectVelocity.x -= distanceToSlopeStart * directionX;
+                        collisionData.collidedObjects.Add((collisionData.collidedObjects.Count + 1), newCollisionInfo);
                     }
 
-                    AscendSlope(ref objectVelocity, currentSlopeAngle, rayHit.normal);
+                    float currentSlopeAngle = Vector2.Angle(rayHit.normal, Vector2.up);
 
-                    objectVelocity.x += distanceToSlopeStart * directionX;
-                }
-
-                if (!collisionData.isAscendingSlope || currentSlopeAngle > collisionAttributes.objectMaxSlope)
-                {
-                    objectVelocity.x = (rayHit.distance - collisionAttributes.objectSkinWidth) * directionX;
-
-                    rayLength = rayHit.distance;
-
-                    if (collisionData.isAscendingSlope)
+                    if (i == 0 && currentSlopeAngle <= collisionAttributes.objectMaxSlope)
                     {
-                        objectVelocity.y = Mathf.Tan(collisionData.currentSlopeAngle * Mathf.Deg2Rad * Mathf.Abs(objectVelocity.x));
+                        if (collisionData.isDescendingSlope)
+                        {
+                            collisionData.isDescendingSlope = false;
+
+                            objectVelocity = collisionData.previousVelocity;
+                        }
+
+                        float distanceToSlopeStart = 0;
+
+                        if (currentSlopeAngle != collisionData.previousSlopeAngle)
+                        {
+                            distanceToSlopeStart = rayHit.distance - collisionAttributes.objectSkinWidth;
+
+                            objectVelocity.x -= distanceToSlopeStart * directionX;
+                        }
+
+                        AscendSlope(ref objectVelocity, currentSlopeAngle, rayHit.normal);
+
+                        objectVelocity.x += distanceToSlopeStart * directionX;
                     }
 
-                    collisionData.isCollidingLeft = directionX == -1;
-                    collisionData.isCollidingRight = directionX == 1;
+                    if (!collisionData.isAscendingSlope || currentSlopeAngle > collisionAttributes.objectMaxSlope)
+                    {
+                        objectVelocity.x = (rayHit.distance - collisionAttributes.objectSkinWidth) * directionX;
+
+                        rayLength = rayHit.distance;
+
+                        if (collisionData.isAscendingSlope)
+                        {
+                            objectVelocity.y = Mathf.Tan(collisionData.currentSlopeAngle * Mathf.Deg2Rad * Mathf.Abs(objectVelocity.x));
+                        }
+
+                        collisionData.isCollidingLeft = directionX == -1;
+                        collisionData.isCollidingRight = directionX == 1;
+                    }
                 }
             }
-        }
+        }       
     }
 
     public virtual void DetectVerticalCollisions(ref Vector2 objectVelocity, Vector2 inputDirection)
     {
-        float directionY = Mathf.Sign(objectVelocity.y);
-        float rayLength = Mathf.Abs(objectVelocity.y) + collisionAttributes.objectSkinWidth;
-
-        for (int i = 0; i < collisionVerticalRayCount; i++)
+        if (canCheckForCollisions)
         {
-            Vector2 rayOrigin = (directionY == -1) ? rayOrigin = objectBounds.bottomLeft : objectBounds.topLeft;
-            rayOrigin += Vector2.right * (collisionVerticalRaySpacing * i + objectVelocity.x);
+            float directionY = Mathf.Sign(objectVelocity.y);
+            float rayLength = Mathf.Abs(objectVelocity.y) + collisionAttributes.objectSkinWidth;
 
-            RaycastHit2D rayHit = Physics2D.Raycast(rayOrigin, Vector2.up * directionY, rayLength, collisionAttributes.collisionMask);
-
-            Debug.DrawRay(rayOrigin, Vector2.up * directionY, Color.red);
-
-            if (rayHit)
+            for (int i = 0; i < collisionVerticalRayCount; i++)
             {
-                if (rayHit.distance == 0)
+                Vector2 rayOrigin = (directionY == -1) ? rayOrigin = objectBounds.bottomLeft : objectBounds.topLeft;
+                rayOrigin += Vector2.right * (collisionVerticalRaySpacing * i + objectVelocity.x);
+
+                RaycastHit2D rayHit = Physics2D.Raycast(rayOrigin, Vector2.up * directionY, rayLength, collisionAttributes.collisionMask);
+
+                Debug.DrawRay(rayOrigin, Vector2.up * directionY, Color.red);
+
+                if (rayHit)
                 {
-                    return;
-                }
-
-                DIRECTION collisionDirection = (directionY == -1) ? DIRECTION.DOWN : DIRECTION.UP;
-                GameObject collisionObject = rayHit.collider.gameObject;
-
-                CollisionInfo2D newCollisionInfo = new CollisionInfo2D(collisionDirection, collisionObject);
-
-                if (!collisionData.collidedObjects.ContainsValue(newCollisionInfo))
-                {
-                    collisionData.collidedObjects.Add((collisionData.collidedObjects.Count + 1), newCollisionInfo);
-                }
-
-                objectVelocity.y = (rayHit.distance - collisionAttributes.objectSkinWidth) * directionY;
-                rayLength = rayHit.distance;
-
-                if (collisionData.isAscendingSlope) 
-                {
-                    objectVelocity.x = objectVelocity.y / Mathf.Tan(collisionData.currentSlopeAngle * Mathf.Deg2Rad) * Mathf.Sign(objectVelocity.x);
-                }
-
-                collisionData.isCollidingBelow = directionY == -1;
-                collisionData.isCollidingAbove = directionY == 1;
-            }
-
-            if (collisionData.isAscendingSlope)
-            {
-                float directionX = Mathf.Sign(objectVelocity.x);
-
-                rayLength = Mathf.Abs(objectVelocity.x) + collisionAttributes.objectSkinWidth;
-
-                Vector2 newRayOrigin = ((directionX == -1) ? objectBounds.bottomLeft : objectBounds.bottomRight) + Vector2.up * objectVelocity.y;
-
-                RaycastHit2D newRayHit = Physics2D.Raycast(newRayOrigin, Vector2.right * directionX, rayLength, collisionAttributes.collisionMask);
-
-                if (newRayHit)
-                {
-                    float newSlopeAngle = Vector2.Angle(newRayHit.normal, Vector2.up);
-
-                    if (newSlopeAngle != collisionData.currentSlopeAngle)
+                    if (rayHit.distance == 0)
                     {
-                        objectVelocity.x = (newRayHit.distance - collisionAttributes.objectSkinWidth) * directionX;
+                        return;
+                    }
 
-                        collisionData.currentSlopeAngle = newSlopeAngle;
-                        collisionData.slopeNormal = newRayHit.normal;
+                    DIRECTION collisionDirection = (directionY == -1) ? DIRECTION.DOWN : DIRECTION.UP;
+                    GameObject collisionObject = rayHit.collider.gameObject;
+
+                    CollisionInfo2D newCollisionInfo = new CollisionInfo2D(collisionDirection, collisionObject);
+
+                    if (!collisionData.collidedObjects.ContainsValue(newCollisionInfo))
+                    {
+                        collisionData.collidedObjects.Add((collisionData.collidedObjects.Count + 1), newCollisionInfo);
+                    }
+
+                    objectVelocity.y = (rayHit.distance - collisionAttributes.objectSkinWidth) * directionY;
+                    rayLength = rayHit.distance;
+
+                    if (collisionData.isAscendingSlope)
+                    {
+                        objectVelocity.x = objectVelocity.y / Mathf.Tan(collisionData.currentSlopeAngle * Mathf.Deg2Rad) * Mathf.Sign(objectVelocity.x);
+                    }
+
+                    collisionData.isCollidingBelow = directionY == -1;
+                    collisionData.isCollidingAbove = directionY == 1;
+                }
+
+                if (collisionData.isAscendingSlope)
+                {
+                    float directionX = Mathf.Sign(objectVelocity.x);
+
+                    rayLength = Mathf.Abs(objectVelocity.x) + collisionAttributes.objectSkinWidth;
+
+                    Vector2 newRayOrigin = ((directionX == -1) ? objectBounds.bottomLeft : objectBounds.bottomRight) + Vector2.up * objectVelocity.y;
+
+                    RaycastHit2D newRayHit = Physics2D.Raycast(newRayOrigin, Vector2.right * directionX, rayLength, collisionAttributes.collisionMask);
+
+                    if (newRayHit)
+                    {
+                        float newSlopeAngle = Vector2.Angle(newRayHit.normal, Vector2.up);
+
+                        if (newSlopeAngle != collisionData.currentSlopeAngle)
+                        {
+                            objectVelocity.x = (newRayHit.distance - collisionAttributes.objectSkinWidth) * directionX;
+
+                            collisionData.currentSlopeAngle = newSlopeAngle;
+                            collisionData.slopeNormal = newRayHit.normal;
+                        }
                     }
                 }
             }
@@ -312,6 +320,20 @@ public class CollisionManager2D : MonoBehaviour
                 collisionData.isSlidingDownSlope = true;
             }
         }
+    }
+
+    public virtual void EnableCollisions()
+    {
+        canCheckForCollisions = true;
+
+        objectCollider.enabled = true;
+    }
+
+    public virtual void DisableCollisions()
+    {
+        canCheckForCollisions = false;
+
+        objectCollider.enabled = false;
     }
 
     public bool CheckForCollision(Vector2 startPoint, Vector2 direction, float rayLength, LayerMask targetLayer)

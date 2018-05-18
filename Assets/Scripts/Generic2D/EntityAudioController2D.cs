@@ -10,16 +10,22 @@ public class EntityAudioController2D : MonoBehaviour
     {
         AudioClip targetAudioClip = RetrieveTargetClip(eventName);
 
-        AudioManager.Instance.RequestNewAudioSource(AUDIO_SOURCE_TYPE.SOUND_EFFECT, targetAudioClip);
+        if (targetAudioClip != null)
+        {
+            AudioManager.Instance.RequestNewAudioSource(AUDIO_SOURCE_TYPE.SOUND_EFFECT, targetAudioClip);
+        }
     }
 
     private AudioClip RetrieveTargetClip(string clipName)
     {
-        for (int i = 0; i < entityAudioClips.entityAudio.Length; i++)
+        if (entityAudioClips.entityAudio != null)
         {
-            if (entityAudioClips.entityAudio[i].name == clipName)
+            for (int i = 0; i < entityAudioClips.entityAudio.Length; i++)
             {
-                return entityAudioClips.entityAudio[i].clip;
+                if (entityAudioClips.entityAudio[i].name == clipName)
+                {
+                    return entityAudioClips.entityAudio[i].clip;
+                }
             }
         }
 

@@ -4,7 +4,7 @@ using UnityEngine;
 public class AnimationController2D : MonoBehaviour
 {
     [Header("Animation Controller Attributes")]
-    public Animator targetAnimator;
+    private Animator targetAnimator;
 
     private void Start()
     {

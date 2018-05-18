@@ -15,17 +15,26 @@ public class BoxCameraFollow2D : MonoBehaviour
     private float currentLookAheadX;
     private float targetLookAheadX;
 
+    private float currentVerticalLook;
+    private float targetVerticalLook;
+
     private float horizontalSmoothVelocity;
     private float verticalSmoothVelocity;
+    private float verticalLookSmoothVelocity;
 
     [Space(10)]
     public float horizontalSmoothTime;
     public float verticalSmoothTime;
 
+    [Space(10)]
+    public float verticalLookSmoothTime;
+
     private bool isLookAheadStopped;
 
     [Space(10)]
     public float verticalOffset;
+
+    [Space(10)]
     public float cameraZOffset;
 
     [Space(10)]
@@ -45,6 +54,11 @@ public class BoxCameraFollow2D : MonoBehaviour
 
     private void CameraSetup()
     {
+        if (targetPlayerController == null)
+        {
+            targetPlayerController = GameObject.FindObjectOfType<PlayerController2D>();
+        }
+
         if (targetPlayerController != null)
         {
             playerCollider = targetPlayerController.gameObject.GetComponent<BoxCollider2D>();
@@ -150,4 +164,12 @@ public class BoxCameraFollow2D : MonoBehaviour
             focusAreaVelocity = new Vector2(shiftX, shiftY);
         }
     }
+}
+
+[System.Serializable]
+public struct PlayerCameraLookAttributes
+{
+    [Header("Player Camera Look Attributes")]
+    public float cameraLookUpHeight;
+    public float cameraLookDownHeight;
 }

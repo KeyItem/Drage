@@ -18,6 +18,8 @@ public class PlayerCollisionManager2D : CollisionManager2D
         float directionX = collisionData.faceDirection;
         float rayLength = Mathf.Abs(objectVelocity.x) + collisionAttributes.objectSkinWidth;
 
+        int wallHitCount = 0;
+
         if (Mathf.Abs(objectVelocity.x) < collisionAttributes.objectSkinWidth)
         {
             rayLength = 2 * collisionAttributes.objectSkinWidth;
@@ -90,9 +92,18 @@ public class PlayerCollisionManager2D : CollisionManager2D
 
                     if (Helper.LayerMaskContainsLayer(collisionAttributes.climbableWallMask, rayHit.collider.gameObject.layer))
                     {
-                        playerWallCollisionData.isAdjacentToClimbableWall = true;
+                        wallHitCount++;
                     }
                 }
+            }
+
+            if (wallHitCount >= collisionHorizontalRayCount / 2)
+            {
+                playerWallCollisionData.isAdjacentToClimbableWall = true;
+            }
+            else
+            {
+                playerWallCollisionData.isAdjacentToClimbableWall = false;
             }
         }
     }
